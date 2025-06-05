@@ -56,6 +56,16 @@ impl VPlic {
         inner.pending[index] |= 1 << bit;
     }
 
+    pub fn get_pending_word(&self, word: usize) -> u32 {
+        let inner = self.inner.lock();
+        inner.pending[word]
+    }
+
+    pub fn set_pending_word(&self, word: usize, val: u32) {
+        let mut inner = self.inner.lock();
+        inner.pending[word] = val;
+    }
+
     pub fn clear_pending(&self, irq: usize) {
         let (index, bit) = Self::index_and_bit(irq);
         let mut inner = self.inner.lock();

@@ -25,23 +25,22 @@ impl BaseDeviceOps<GuestPhysAddrRange> for VPlic {
 
         let val = match width {
             AccessWidth::Dword => {
-                let mut inner = self.inner.lock();
                 if (PLIC_PRIO_BEGIN..=PLIC_PRIO_END).contains(&offset) {
                     let irq = offset / 4;
-                    inner.prio[irq] as usize
+                    self.get_prio(irq) as usize
                 } else if (PLIC_PENDING_BEGIN..=PLIC_PENDING_END).contains(&offset) {
                     let word = (offset - PLIC_PENDING_BEGIN) / 4;
-                    inner.pending[word] as usize
+                    self.get_pending_word(word) as usize
                 } else if (PLIC_ENABLE_BEGIN..=PLIC_ENABLE_END).contains(&offset) {
                     let ctx = (offset - PLIC_ENABLE_BEGIN) / CONTEXT_ENABLE_STRIDE;
                     let word = ((offset - PLIC_ENABLE_BEGIN) % CONTEXT_ENABLE_STRIDE) / 4;
-                    inner.enable[ctx][word] as usize
+                    self.get_enable_word(ctx, word) as usize
                 } else if (PLIC_THRESHOLD_CLAIM_BEGIN..=PLIC_THRESHOLD_CLAIM_END).contains(&offset) {
                     let ctx = (offset - PLIC_THRESHOLD_CLAIM_BEGIN) / CONTEXT_STRIDE;
                     let local = (offset - PLIC_THRESHOLD_CLAIM_BEGIN) % CONTEXT_STRIDE;
                     match local {
-                        0 => inner.threshold[ctx] as usize,
-                        4 => inner.claim[ctx] as usize,
+                        0 => self.get_threshold(ctx) as usize,
+                        4 => self.get_claim(ctx) as usize,
                         _ => 0,
                     }
                 } else {
@@ -61,20 +60,19 @@ impl BaseDeviceOps<GuestPhysAddrRange> for VPlic {
             return Ok(());
         }
 
-        let mut inner = self.inner.lock();
         if (PLIC_PRIO_BEGIN..=PLIC_PRIO_END).contains(&offset) {
             let irq = offset / 4;
-            inner.prio[irq] = val as u32;
+            self.set_prio(irq, val as u32);
         } else if (PLIC_ENABLE_BEGIN..=PLIC_ENABLE_END).contains(&offset) {
             let ctx = (offset - PLIC_ENABLE_BEGIN) / CONTEXT_ENABLE_STRIDE;
             let word = ((offset - PLIC_ENABLE_BEGIN) % CONTEXT_ENABLE_STRIDE) / 4;
-            inner.enable[ctx][word] = val as u32;
+            self.set_enable_word(ctx, word, val as u32);
         } else if (PLIC_THRESHOLD_CLAIM_BEGIN..=PLIC_THRESHOLD_CLAIM_END).contains(&offset) {
             let ctx = (offset - PLIC_THRESHOLD_CLAIM_BEGIN) / CONTEXT_STRIDE;
             let local = (offset - PLIC_THRESHOLD_CLAIM_BEGIN) % CONTEXT_STRIDE;
             match local {
-                0 => inner.threshold[ctx] = val as u32,
-                4 => inner.claim[ctx] = 0, // complete_irq
+                0 => self.set_threshold(ctx, val as u32),
+                4 => self.complete_irq(ctx, val),
                 _ => {}
             }
         }
