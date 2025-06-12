@@ -58,11 +58,17 @@ impl VPlic {
 
     pub fn get_pending_word(&self, word: usize) -> u32 {
         let inner = self.inner.lock();
+        if word >= inner.pending.len() {
+            return 0;
+        }
         inner.pending[word]
     }
 
     pub fn set_pending_word(&self, word: usize, val: u32) {
         let mut inner = self.inner.lock();
+        if word >= inner.pending.len() {
+            return;
+        }
         inner.pending[word] = val;
     }
 
@@ -80,11 +86,17 @@ impl VPlic {
 
     pub fn set_enable_word(&self, context: usize, word: usize, val: u32) {
         let mut inner = self.inner.lock();
+        if context >= inner.enable.len() || word >= inner.enable[context].len() {
+            return;
+        }
         inner.enable[context][word] = val;
     }
 
     pub fn get_enable_word(&self, context: usize, word: usize) -> u32 {
         let inner = self.inner.lock();
+        if context >= inner.enable.len() || word >= inner.enable[context].len() {
+            return 0;
+        }
         inner.enable[context][word]
     }
 
@@ -133,3 +145,4 @@ impl VPlic {
         self.set_claim(context, 0);
     }
 }
+

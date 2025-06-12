@@ -10,7 +10,7 @@ use crate::vplic::VPlic;
 
 impl BaseDeviceOps<GuestPhysAddrRange> for VPlic {
     fn emu_type(&self) -> EmuDeviceType {
-        todo!()
+        EmuDeviceType::EmuDeviceTInterruptController
     }
 
     fn address_range(&self) -> GuestPhysAddrRange {
@@ -80,3 +80,4 @@ impl BaseDeviceOps<GuestPhysAddrRange> for VPlic {
         Ok(())
     }
 }
+
