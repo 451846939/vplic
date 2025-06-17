@@ -1,31 +1,55 @@
 use crate::consts::*;
 use spin::Mutex;
+use alloc::vec::Vec;
+use alloc::vec;
 
 const BITS_PER_WORD: usize = 32;
 
+pub struct Context {
+    pub enable: Vec<u32>,
+    pub threshold: u32,
+    pub claim: u32,
+}
+
 pub struct VPlic {
     pub emulated_base_addr: usize,
+    pub max_harts: usize,
+    pub max_contexts: usize,
     pub inner: Mutex<VPlicInner>,
 }
 
 pub struct VPlicInner {
-    pub prio: [u32; PLIC_MAX_IRQ + 1],
-    pub pending: [u32; (PLIC_MAX_IRQ + BITS_PER_WORD) / BITS_PER_WORD],
-    pub enable: [[u32; (PLIC_MAX_IRQ + BITS_PER_WORD) / BITS_PER_WORD]; MAX_CONTEXTS],
-    pub threshold: [u32; MAX_CONTEXTS],
-    pub claim: [u32; MAX_CONTEXTS],
+    pub prio: Vec<u32>,
+    pub pending: Vec<u32>,
+    pub contexts: Vec<Context>,
 }
 
 impl VPlic {
-    pub fn new(emulated_base_addr: usize) -> Self {
+
+    pub fn new_with_base(emulated_base_addr: usize) -> Self {
+        Self::new(emulated_base_addr, MAX_HARTS)
+    }
+    
+    pub fn new(emulated_base_addr: usize, max_harts: usize) -> Self {
+        let max_contexts = max_harts * CONTEXT_PER_HART;
+        let prio = vec![0; PLIC_MAX_IRQ + 1];
+        let pending = vec![0; (PLIC_MAX_IRQ + BITS_PER_WORD) / BITS_PER_WORD];
+        let enable_template = vec![0; (PLIC_MAX_IRQ + BITS_PER_WORD) / BITS_PER_WORD];
+        let contexts = (0..max_contexts)
+            .map(|_| Context {
+                enable: enable_template.clone(),
+                threshold: 0,
+                claim: 0,
+            })
+            .collect();
         Self {
             emulated_base_addr,
+            max_harts,
+            max_contexts,
             inner: Mutex::new(VPlicInner {
-                prio: [0; PLIC_MAX_IRQ + 1],
-                pending: [0; (PLIC_MAX_IRQ + BITS_PER_WORD) / BITS_PER_WORD],
-                enable: [[0; (PLIC_MAX_IRQ + BITS_PER_WORD) / BITS_PER_WORD]; MAX_CONTEXTS],
-                threshold: [0; MAX_CONTEXTS],
-                claim: [0; MAX_CONTEXTS],
+                prio,
+                pending,
+                contexts,
             }),
         }
     }
@@ -81,43 +105,43 @@ impl VPlic {
     pub fn get_enable(&self, context: usize, irq: usize) -> bool {
         let (index, bit) = Self::index_and_bit(irq);
         let inner = self.inner.lock();
-        (inner.enable[context][index] & (1 << bit)) != 0
+        (inner.contexts[context].enable[index] & (1 << bit)) != 0
     }
 
     pub fn set_enable_word(&self, context: usize, word: usize, val: u32) {
         let mut inner = self.inner.lock();
-        if context >= inner.enable.len() || word >= inner.enable[context].len() {
+        if context >= inner.contexts.len() || word >= inner.contexts[context].enable.len() {
             return;
         }
-        inner.enable[context][word] = val;
+        inner.contexts[context].enable[word] = val;
     }
 
     pub fn get_enable_word(&self, context: usize, word: usize) -> u32 {
         let inner = self.inner.lock();
-        if context >= inner.enable.len() || word >= inner.enable[context].len() {
+        if context >= inner.contexts.len() || word >= inner.contexts[context].enable.len() {
             return 0;
         }
-        inner.enable[context][word]
+        inner.contexts[context].enable[word]
     }
 
     pub fn get_threshold(&self, context: usize) -> u32 {
         let inner = self.inner.lock();
-        inner.threshold[context]
+        inner.contexts[context].threshold
     }
 
     pub fn set_threshold(&self, context: usize, threshold: u32) {
         let mut inner = self.inner.lock();
-        inner.threshold[context] = threshold;
+        inner.contexts[context].threshold = threshold;
     }
 
     pub fn get_claim(&self, context: usize) -> u32 {
         let inner = self.inner.lock();
-        inner.claim[context]
+        inner.contexts[context].claim
     }
 
     pub fn set_claim(&self, context: usize, claim: u32) {
         let mut inner = self.inner.lock();
-        inner.claim[context] = claim;
+        inner.contexts[context].claim = claim;
     }
 
     pub fn claim_irq(&self, context: usize) -> Option<usize> {
