@@ -26,11 +26,10 @@ pub struct VPlicInner {
 
 impl VPlic {
 
-    pub fn new_with_base(emulated_base_addr: usize) -> Self {
-        Self::new(emulated_base_addr, MAX_HARTS)
+    pub fn new(emulated_base_addr: usize) -> Self {
+        Self::new_with_harts(emulated_base_addr, MAX_HARTS)
     }
-    
-    pub fn new(emulated_base_addr: usize, max_harts: usize) -> Self {
+    pub fn new_with_harts(emulated_base_addr: usize, max_harts: usize) -> Self {
         let max_contexts = max_harts * CONTEXT_PER_HART;
         let prio = vec![0; PLIC_MAX_IRQ + 1];
         let pending = vec![0; (PLIC_MAX_IRQ + BITS_PER_WORD) / BITS_PER_WORD];

@@ -22,10 +22,10 @@ mod more_tests {
     const BASE_ADDR: usize = 0x1000;
 
     fn setup_vplic() -> VPlic {
-        VPlic::new(BASE_ADDR, MAX_HARTS)
+        VPlic::new_with_harts(BASE_ADDR, MAX_HARTS)
     }
     fn setup_vplic_with_base(base: usize) -> VPlic {
-        VPlic::new(base, MAX_HARTS)
+        VPlic::new_with_harts(base, MAX_HARTS)
     }
     #[test]
     fn test_pending_multiple_bits() {
