@@ -3,7 +3,7 @@ name = "riscv_vplic"
 edition = "2024"
 
 [dependencies]
-axdevice_base = { git = "https://github.com/arceos-hypervisor/axdevice_crates.git",branch = "inject_interrupt"}
+axdevice_base = { git = "https://github.com/arceos-hypervisor/axdevice_crates.git", branch = "inject_interrupt" }
 axaddrspace = { git = "https://github.com/arceos-hypervisor/axaddrspace.git" }
 memory_addr = "0.3"
 axerrno = "0.1.0"
@@ -12,3 +12,4 @@ log = "0.4.21"
 # vcpu_if = { path = "../vcpu_if" }
 # crate_interface = "0.1.3"
 spin = "0.9"
+riscv = { git = "https://github.com/rcore-os/riscv", features = ["inline-asm"] }

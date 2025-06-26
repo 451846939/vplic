@@ -1,23 +1,24 @@
 use crate::consts::*;
-use spin::Mutex;
-use alloc::vec::Vec;
 use alloc::vec;
+use alloc::vec::Vec;
+use log::info;
+use spin::Mutex;
 
 const BITS_PER_WORD: usize = 32;
-
+#[derive(Debug)]
 pub struct Context {
     pub enable: Vec<u32>,
     pub threshold: u32,
     pub claim: u32,
 }
-
+#[derive(Debug)]
 pub struct VPlic {
     pub emulated_base_addr: usize,
     pub max_harts: usize,
     pub max_contexts: usize,
     pub inner: Mutex<VPlicInner>,
 }
-
+#[derive(Debug)]
 pub struct VPlicInner {
     pub prio: Vec<u32>,
     pub pending: Vec<u32>,
@@ -25,7 +26,6 @@ pub struct VPlicInner {
 }
 
 impl VPlic {
-
     pub fn new(emulated_base_addr: usize) -> Self {
         Self::new_with_harts(emulated_base_addr, MAX_HARTS)
     }
@@ -144,13 +144,17 @@ impl VPlic {
     }
 
     pub fn claim_irq(&self, context: usize) -> Option<usize> {
-        let threshold = self.get_threshold(context);
+        // let threshold = self.get_threshold(context);
         let mut best_irq = None;
         let mut best_prio = 0;
 
         for irq in 1..=PLIC_MAX_IRQ {
             let prio = self.get_prio(irq);
-            if prio > threshold && prio > best_prio && self.get_pending(irq) && self.get_enable(context, irq) {
+            if prio > threshold
+                && prio > best_prio
+                && self.get_pending(irq)
+                && self.get_enable(context, irq)
+            {
                 best_irq = Some(irq);
                 best_prio = prio;
             }
@@ -159,13 +163,27 @@ impl VPlic {
         if let Some(irq) = best_irq {
             self.clear_pending(irq);
             self.set_claim(context, irq as u32);
+           
+            
+            if !self.any_pending(context) {
+                unsafe {
+                    riscv::register::hvip::clear_vseip();
+                }
+            }
         }
 
         best_irq
     }
 
+    pub fn any_pending(&self, context: usize) -> bool {
+        for irq in 1..=PLIC_MAX_IRQ {
+            if self.get_pending(irq) && self.get_enable(context, irq) {
+                return true;
+            }
+        }
+        false
+    }
     pub fn complete_irq(&self, context: usize, _irq: usize) {
         self.set_claim(context, 0);
     }
 }
-
