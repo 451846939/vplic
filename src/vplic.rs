@@ -144,7 +144,7 @@ impl VPlic {
     }
 
     pub fn claim_irq(&self, context: usize) -> Option<usize> {
-        // let threshold = self.get_threshold(context);
+        let threshold = self.get_threshold(context);
         let mut best_irq = None;
         let mut best_prio = 0;
 
